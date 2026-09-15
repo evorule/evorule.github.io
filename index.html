@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EvoRule — Deterministic-First Rule Governance Engine</title>
+<meta name="description" content="EvoRule is a deterministic-first rule governance engine (Rust). Every decision is provable, replayable, tamper-evident via a BLAKE3 hash chain." />
+<style>
+  :root {
+    --gold: #D4AF37;
+    --gold-light: #F0D27A;
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #9aa7b8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  header {
+    position: sticky; top: 0; background: rgba(13,17,23,0.92); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border); z-index: 10;
+  }
+  nav { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { font-weight: 700; color: var(--gold); letter-spacing: 0.5px; text-decoration: none; }
+  nav ul { list-style: none; display: flex; gap: 24px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+  nav a:hover { color: var(--gold); }
+
+  .hero { padding: 64px 0 48px; text-align: center; }
+  .hero .banner {
+    max-width: 960px; width: 100%; height: auto; display: block; margin: 0 auto;
+    border-radius: 12px; border: 1px solid var(--border);
+  }
+  .cta { margin-top: 32px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 12px 28px; border-radius: 6px;
+    text-decoration: none; font-weight: 600; font-size: 15px;
+  }
+  .btn-primary { background: var(--gold); color: #0d1117; }
+  .btn-ghost { border: 1px solid var(--gold); color: var(--gold); }
+  .btn:hover { opacity: 0.88; }
+
+  section { padding: 64px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 28px; margin-bottom: 32px; color: var(--gold); text-align: center; }
+  h3 { font-size: 18px; margin-bottom: 8px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--card); border-radius: 10px; padding: 24px; border: 1px solid var(--border);
+  }
+  .card .num { font-size: 26px; color: var(--gold); font-weight: 700; }
+  .card p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 15px; vertical-align: top; }
+  th { background: #21262d; color: var(--gold); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td span.no { color: #C96A5B; }
+  td span.yes { color: #8FBF6B; }
+
+  .repo { background: var(--card); border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; border-left: 4px solid var(--gold); }
+  .repo h3 a { color: var(--text); text-decoration: none; }
+  .repo h3 a:hover { color: var(--gold); }
+  .repo p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .repo .meta { margin-top: 8px; font-size: 12px; color: var(--gold); }
+
+  .links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .links-grid a { display: block; background: var(--card); border-radius: 8px; padding: 16px 20px; color: var(--text); text-decoration: none; }
+  .links-grid a:hover { border: 1px solid var(--gold); }
+  .links-grid small { display: block; color: var(--muted); margin-top: 4px; font-size: 12px; }
+
+  footer { border-top: 1px solid var(--border); padding: 32px 0; text-align: center; color: var(--muted); font-size: 13px; }
+  footer a { color: var(--gold); text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .hero .banner { border-radius: 8px; }
+    nav ul { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#">EvoRule</a>
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#fit">Where it fits</a></li>
+        <li><a href="#ecosystem">Ecosystem</a></li>
+        <li><a href="#quickstart">Quick start</a></li>
+        <li><a href="#links">Links</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <img class="banner" src="assets/evorule-banner.svg" alt="EvoRule — deterministic-first reactive rule execution engine" />
+    <div class="cta">
+      <a class="btn btn-primary" href="wasm-demo/index.html">Live Demo (no signup)</a>
+      <a class="btn btn-ghost" href="https://github.com/evorule/evorule" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-ghost" href="https://gitee.com/evorule/evorule" target="_blank" rel="noopener">Gitee (main)</a>
+    </div>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Core features</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="num">Determinism</div>
+        <p>No Float in JsonValue, BTreeMap-ordered, explicit serialization; proptest-verified: same input, same output.</p>
+      </div>
+      <div class="card">
+        <div class="num">Auditable</div>
+        <p>Append-only WAL + BLAKE3 hash chain; all three tamper classes (content / chain_hash / prev_hash) are detected.</p>
+      </div>
+      <div class="card">
+        <div class="num">Time machine</div>
+        <p>Replay / rewind / fork / diff — replay any point in execution history (implemented in the governance layer).</p>
+      </div>
+      <div class="card">
+        <div class="num">Fail-closed</div>
+        <p>No silent pass-through: 3 consecutive WAL failures terminate the session; zero unsafe in the default build.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="fit">
+  <div class="wrap">
+    <h2>Where it fits</h2>
+    <table>
+      <tr><th style="width:30%">If you have…</th><th>Existing tools give you…</th><th>EvoRule adds…</th></tr>
+      <tr>
+        <td>an LLM / agent that <i>acts</i></td>
+        <td>observability (LangSmith, AgentV): <i>see</i> what it did, after the fact</td>
+        <td><span class="yes">a gate that <i>stops</i> what it shouldn't do, before it runs</span></td>
+      </tr>
+      <tr>
+        <td>a policy decision point</td>
+        <td>policy-as-code (OPA, Cedar): <i>allow / deny</i> at a point</td>
+        <td><span class="yes">the same decision, written to a signed hash chain you can <i>prove</i> and <i>replay</i></span></td>
+      </tr>
+      <tr>
+        <td>a compliance requirement</td>
+        <td>"keep a log"</td>
+        <td><span class="yes">a decision artifact that survives audit and tampering challenges</span></td>
+      </tr>
+    </table>
+    <p style="margin-top:18px;color:var(--muted);font-size:14px;">
+      <b style="color:var(--text)">For:</b> regulated finance, healthcare, MLPS 2.0 / EU AI Act / DORA, offline or air-gapped Rust backends, and agent-platform builders.<br/>
+      <b style="color:var(--text)">Not for:</b> <span class="no">simple allow/deny already on AWS (→ Cedar)</span>; <span class="no">full BPMN workflows (→ Temporal / Camunda)</span>; <span class="no">"just log it" (→ OpenTelemetry)</span>.
+    </p>
+  </div>
+</section>
+
+<section id="ecosystem">
+  <div class="wrap">
+    <h2>Ecosystem</h2>
+    <div class="repo">
+      <h3><a href="https://github.com/evorule/evorule" target="_blank" rel="noopener">evorule</a></h3>
+      <p>Core deterministic rule engine (Rust). Deterministic execution, auditable provenance, fail-closed, zero-unsafe default build.</p>
+      <div class="meta">v0.6.0 · Full suite 782 passed / 0 failed (measured 2026-09-14) · AGPL-3.0</div>
+    </div>
+    <div class="repo">
+      <h3><a href="https://github.com/evorule/evorule-server" target="_blank" rel="noopener">evorule-server</a></h3>
+      <p>Official HTTP service entrypoint (Rust/Axum): session API, audit SSE stream, auth, Prometheus metrics, hot-reload, template market, PDF export.</p>
+      <div class="meta">AGPL-3.0</div>
+    </div>
+    <div class="repo">
+      <h3><a href="https://github.com/evorule/evorule-console-cloud" target="_blank" rel="noopener">evorule-console-cloud</a></h3>
+      <p>Governance &amp; audit console (web frontend): BLAKE3 tamper-evidence, replay, rollback; targets EU AI Act Art.12 and China MLPS 2.0 L3; in-browser live demo, no signup.</p>
+      <div class="meta">AGPL-3.0</div>
+    </div>
+    <div class="repo">
+      <h3><a href="https://github.com/evorule/evo-agent" target="_blank" rel="noopener">evo-agent</a></h3>
+      <p>Trustworthy AI-agent orchestration layer (Rust): LLM + tools + memory + rule constraints; every execution leaves an auditable, replayable Fact chain.</p>
+      <div class="meta">AGPL-3.0</div>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart">
+  <div class="wrap">
+    <h2>Quick start</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Prebuilt binaries</h3>
+        <p>v0.6.0 ships single-file executables for Linux / Windows, zero-dependency, run directly.</p>
+        <p style="margin-top:12px;">
+          <a href="https://github.com/evorule/evorule/releases" target="_blank" rel="noopener" style="color:var(--gold)">GitHub Releases →</a><br/>
+          <a href="https://gitee.com/evorule/evorule/releases" target="_blank" rel="noopener" style="color:var(--gold)">Gitee Releases →</a>
+        </p>
+      </div>
+      <div class="card">
+        <h3>crates.io</h3>
+        <p>Use as a library: evorule-tcb / evorule-reactor / evorule-governance / evorule-cli.</p>
+        <p style="margin-top:12px;"><a href="https://crates.io/users/EvoRuleLab" target="_blank" rel="noopener" style="color:var(--gold)">EvoRuleLab @ crates.io →</a></p>
+      </div>
+      <div class="card">
+        <h3>Command line</h3>
+        <p>evorule validate ./rules/ · evorule run · evorule verify-chain · evorule replay</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="links">
+  <div class="wrap">
+    <h2>Links</h2>
+    <div class="links-grid">
+      <a href="wasm-demo/index.html">🚀 WASM Demo<small>run the engine in your browser · no signup</small></a>
+      <a href="https://github.com/evorule/evorule-console-cloud" target="_blank" rel="noopener">🖥️ Console Cloud<small>full governance &amp; audit console</small></a>
+      <a href="https://github.com/evorule" target="_blank" rel="noopener">🐙 GitHub Organization<small>11 public repositories</small></a>
+      <a href="https://gitee.com/evorule" target="_blank" rel="noopener">🇨🇳 Gitee (main)<small>code hosting &amp; community</small></a>
+      <a href="https://crates.io/users/EvoRuleLab" target="_blank" rel="noopener">📦 crates.io<small>publisher: EvoRuleLab</small></a>
+      <a href="https://juejin.cn" target="_blank" rel="noopener">📝 Juejin column<small>first post (link to be added after launch)</small></a>
+      <a href="mailto:evorulelab@gmail.com">✉️ Contact<small>evorulelab@gmail.com</small></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>© 2026 EvoRule · License: <a href="https://github.com/evorule/evorule/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0</a> (<a href="https://github.com/evorule/evorule/blob/main/DUAL_LICENSE.md" target="_blank" rel="noopener">dual-license note</a>)</p>
+    <p style="margin-top:6px;">Rule as knowledge, execution as proof · Every decision provable, replayable, tamper-evident</p>
+  </div>
+</footer>
+
+</body>
+</html>

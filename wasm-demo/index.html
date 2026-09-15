@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EvoRule — Live WASM Demo</title>
+<meta name="description" content="Run the real EvoRule engine in your browser: deterministic rule execution, BLAKE3 audit chain, time machine. No signup, no server." />
+<style>
+  :root {
+    --gold: #D4AF37;
+    --gold-light: #F0D27A;
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #9aa7b8;
+    --green: #8FBF6B;
+    --red: #C96A5B;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; width: 100%; }
+  header {
+    background: rgba(13,17,23,0.92); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
+  }
+  nav { display: flex; align-items: center; justify-content: space-between; height: 58px; }
+  nav .brand { font-weight: 700; color: var(--gold); text-decoration: none; letter-spacing: 0.5px; }
+  nav .links a { color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 20px; }
+  nav .links a:hover { color: var(--gold); }
+
+  .hero { padding: 36px 0 8px; }
+  .hero h1 { font-size: 26px; color: var(--gold); }
+  .hero p { color: var(--muted); font-size: 14px; margin-top: 6px; max-width: 760px; }
+  .badges { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .badge { font-size: 12px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .badge.gold { border-color: var(--gold); color: var(--gold); }
+
+  main { flex: 1; padding: 24px 0 48px; }
+  .grid { display: grid; grid-template-columns: 400px 1fr; gap: 24px; align-items: start; }
+
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 14px; }
+
+  .ruleset { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s; }
+  .ruleset:hover { border-color: var(--gold-light); }
+  .ruleset.active { border-color: var(--gold); background: rgba(212,175,55,0.06); }
+  .ruleset .t { font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .ruleset .t .n { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .ruleset .d { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+  label.field { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  textarea {
+    width: 100%; min-height: 110px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    font-family: "SF Mono", Consolas, "Courier New", monospace; font-size: 12.5px; resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--gold); }
+  .samples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .chip {
+    font-size: 12px; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--border); color: var(--muted); background: transparent;
+  }
+  .chip:hover { border-color: var(--gold); color: var(--gold); }
+
+  .btnrow { display: flex; gap: 10px; margin-top: 16px; }
+  .btn {
+    flex: 1; padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+  }
+  .btn-primary { background: var(--gold); color: #0d1117; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-primary:hover { opacity: .88; }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .status { margin-top: 14px; font-size: 13px; color: var(--muted); min-height: 20px; word-break: break-all; }
+  .status.ok { color: var(--green); }
+  .status.err { color: var(--red); }
+
+  .result-block { margin-bottom: 8px; }
+  .k { font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+  pre.json {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; font-size: 12px; font-family: "SF Mono", Consolas, monospace;
+    overflow: auto; max-height: 300px; color: var(--text); white-space: pre-wrap; word-break: break-all;
+  }
+  .type-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 6px; margin-bottom: 8px; }
+  .type-state { background: rgba(143,191,107,.15); color: var(--green); }
+  .type-io_required { background: rgba(212,175,55,.15); color: var(--gold); }
+  .type-halted { background: rgba(201,106,91,.15); color: var(--red); }
+  .type-ignored { background: rgba(154,167,184,.15); color: var(--muted); }
+
+  .chain-wrap { overflow-x: auto; padding-bottom: 6px; }
+  .chain { display: flex; align-items: stretch; gap: 0; min-width: max-content; }
+  .block {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 11px; min-width: 150px; position: relative;
+  }
+  .block .id { color: var(--gold); font-weight: 700; }
+  .block .type { color: var(--text); font-weight: 600; margin: 2px 0; }
+  .block .h { color: var(--muted); font-family: "SF Mono", Consolas, monospace; word-break: break-all; font-size: 10.5px; line-height: 1.5; }
+  .block .h b { color: var(--muted); font-weight: 400; }
+  .link { display: flex; align-items: center; padding: 0 6px; color: var(--gold); font-size: 14px; }
+  .verify-badge { display: inline-block; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 8px; margin-top: 10px; }
+  .verify-ok { background: rgba(143,191,107,.15); color: var(--green); }
+  .verify-fail { background: rgba(201,106,91,.15); color: var(--red); }
+
+  .tm { margin-top: 18px; }
+  .tm .row { display: flex; align-items: center; gap: 12px; }
+  .tm input[type=range] { flex: 1; accent-color: var(--gold); }
+  .tm .v { font-size: 13px; color: var(--gold); font-weight: 700; min-width: 60px; }
+  .tm .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  footer { border-top: 1px solid var(--border); padding: 20px 0; text-align: center; color: var(--muted); font-size: 12px; }
+  footer a { color: var(--gold); text-decoration: none; }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="https://evorule.github.io" target="_blank" rel="noopener">EvoRule</a>
+      <div class="links">
+        <a href="https://evorule.github.io" target="_blank" rel="noopener">Home</a>
+        <a href="https://github.com/evorule/evorule" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Live WASM Demo</h1>
+    <p>This page runs the <b>real</b> EvoRule engine — compiled to WebAssembly and executing entirely in your browser. Pick a ruleset, send an instruction, and watch the deterministic state transition land on an append-only BLAKE3 audit chain. Try the time machine below.</p>
+    <div class="badges">
+      <span class="badge gold">100% in-browser · no server</span>
+      <span class="badge">Real TCB core</span>
+      <span class="badge">BLAKE3 hash chain</span>
+      <span class="badge">Replay / rewind</span>
+    </div>
+  </div>
+
+  <main>
+    <div class="grid">
+
+      <!-- Control panel -->
+      <div class="panel">
+        <h2>Console</h2>
+        <div id="rulesets"></div>
+
+        <label class="field" for="cmd">Instruction (JSON)</label>
+        <textarea id="cmd" spellcheck="false">{}</textarea>
+        <div class="samples" id="samples"></div>
+
+        <div class="btnrow">
+          <button id="run" class="btn btn-primary">Execute</button>
+          <button id="reset" class="btn btn-ghost">Reset</button>
+        </div>
+        <div id="status" class="status">Engine initializing…</div>
+      </div>
+
+      <!-- Output -->
+      <div class="panel">
+        <h2>Result</h2>
+        <div id="result">
+          <div class="status">Run an instruction to see the state transition.</div>
+        </div>
+
+        <h2 style="margin-top:22px;">BLAKE3 audit chain</h2>
+        <div id="chain">
+          <div class="status">No facts yet.</div>
+        </div>
+
+        <div class="tm">
+          <div class="k">Time machine · rewind to version</div>
+          <div class="row">
+            <input type="range" id="tm" min="0" max="0" value="0" step="1" disabled />
+            <span class="v" id="tmv">v0</span>
+          </div>
+          <div class="hint">Rewind moves the working view back in time. The append-only fact log stays intact — the chain is never rewritten.</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Runs <code>evorule-wasm-demo</code> (AGPL-3.0) — <a href="https://github.com/evorule/evorule/tree/main/evorule-wasm-demo" target="_blank" rel="noopener">source</a> · Every decision provable, replayable, tamper-evident</p>
+  </div>
+</footer>
+
+<script type="module">
+  import init, { EvoRuleEngine } from './pkg/evorule_wasm_demo.js';
+  import { RULESETS, SAMPLES } from './rules.js';
+
+  const $ = (id) => document.getElementById(id);
+  const rulesetsEl = $('rulesets'), samplesEl = $('samples');
+  const cmdEl = $('cmd'), statusEl = $('status'), resultEl = $('result'), chainEl = $('chain');
+  const tmEl = $('tm'), tmvEl = $('tmv');
+  const runBtn = $('run'), resetBtn = $('reset');
+
+  let engine = null;
+  let currentId = Object.keys(RULESETS)[0];
+  let lastResult = null;
+
+  // --- render ruleset picker ---
+  function renderRulesets() {
+    rulesetsEl.innerHTML = '';
+    for (const [id, rs] of Object.entries(RULESETS)) {
+      const el = document.createElement('div');
+      el.className = 'ruleset' + (id === currentId ? ' active' : '');
+      el.innerHTML = `<div class="t">${rs.name} <span class="n">${rs.ruleCount} rules</span></div><div class="d">${rs.desc}</div>`;
+      el.addEventListener('click', () => {
+        currentId = id;
+        renderRulesets();
+        loadRules();
+      });
+      rulesetsEl.appendChild(el);
+    }
+  }
+
+  // --- render sample chips ---
+  function renderSamples() {
+    samplesEl.innerHTML = '';
+    const rsSamples = [
+      SAMPLES[currentId],
+      { type: 'increment', params: { attr: 'x', delta: 1 } },
+    ];
+    rsSamples.forEach((s, i) => {
+      const c = document.createElement('button');
+      c.className = 'chip';
+      c.textContent = i === 0 ? 'Example' : 'Increment';
+      c.addEventListener('click', () => {
+        cmdEl.value = JSON.stringify(s);
+        statusEl.textContent = 'Ready.';
+        statusEl.className = 'status';
+      });
+      samplesEl.appendChild(c);
+    });
+  }
+
+  function loadRules() {
+    try {
+      engine.load_rules(JSON.stringify(RULESETS[currentId].transform));
+      renderSamples();
+      status('Loaded ' + RULESETS[currentId].ruleCount + ' rules from ' + RULESETS[currentId].name, 'ok');
+    } catch (e) {
+      status('load_rules failed: ' + e, 'err');
+    }
+  }
+
+  function status(msg, cls) {
+    statusEl.textContent = msg;
+    statusEl.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  // --- execute ---
+  function execute() {
+    let cmd;
+    try {
+      cmd = JSON.parse(cmdEl.value);
+    } catch (e) {
+      status('Invalid JSON: ' + e.message, 'err');
+      return;
+    }
+    try {
+      const res = JSON.parse(engine.execute_instruction(JSON.stringify(cmd)));
+      lastResult = res;
+      renderResult(res);
+      renderChain();
+      renderState();
+      status('Committed to audit chain · version ' + (res.version ?? res.type), 'ok');
+    } catch (e) {
+      status('execute_instruction failed: ' + e, 'err');
+    }
+  }
+
+  function renderResult(res) {
+    let badge = `<span class="type-badge type-${res.type}">${res.type}</span>`;
+    let extra = '';
+    if (res.rule_hits && res.rule_hits.length) {
+      extra = `<div class="result-block"><div class="k">Rule hits</div><pre class="json">${escapeHtml(JSON.stringify(res.rule_hits, null, 2))}</pre></div>`;
+    }
+    if (res.io_type) {
+      extra += `<div class="result-block"><div class="k">IO required</div><pre class="json">${escapeHtml(JSON.stringify(res.params, null, 2))}</pre></div>`;
+    }
+    resultEl.innerHTML = badge + `<div class="result-block"><div class="k">Payload</div><pre class="json">${escapeHtml(JSON.stringify(res.payload ?? res, null, 2))}</pre></div>` + extra;
+  }
+
+  // --- audit chain ---
+  function renderChain() {
+    const chain = JSON.parse(engine.get_audit_chain());
+    if (!chain.length) { chainEl.innerHTML = '<div class="status">No facts yet.</div>'; return; }
+    const blocks = chain.map((e) => `
+      <div class="block">
+        <div class="id">#${e.fact_id}</div>
+        <div class="type">${e.fact_type}</div>
+        <div class="h"><b>content</b> ${shortHash(e.content_hash)}<br/><b>prev</b> ${shortHash(e.prev_hash)}</div>
+      </div>`).join('<div class="link">→</div>');
+    const verified = engine.verify_audit_chain();
+    chainEl.innerHTML = `<div class="chain-wrap"><div class="chain">${blocks}</div></div>
+      <div class="verify-badge ${verified ? 'verify-ok' : 'verify-fail'}">${verified ? 'BLAKE3 chain verified ✓' : 'CHAIN VERIFICATION FAILED ✗'}</div>`;
+  }
+
+  function shortHash(h) {
+    if (!h) return '—';
+    return typeof h === 'string' ? h.slice(0, 18) + '…' : String(h).slice(0, 18) + '…';
+  }
+
+  // --- time machine ---
+  function renderState() {
+    const st = JSON.parse(engine.get_state());
+    tmEl.max = String(Math.max(0, st.version));
+    tmEl.value = String(st.version);
+    tmvEl.textContent = 'v' + st.version;
+    tmEl.disabled = st.version <= 0;
+  }
+
+  tmEl.addEventListener('input', () => {
+    try {
+      const st = JSON.parse(engine.rewind(Number(tmEl.value)));
+      tmvEl.textContent = 'v' + st.version;
+      resultEl.innerHTML = `<div class="result-block"><div class="k">Payload @ v${st.version} (rewound)</div><pre class="json">${escapeHtml(JSON.stringify(st.payload, null, 2))}</pre></div>`;
+      status('Rewound to version ' + st.version + ' — audit chain untouched', 'ok');
+    } catch (e) {
+      status('rewind failed: ' + e, 'err');
+    }
+  });
+
+  // --- wire buttons ---
+  runBtn.addEventListener('click', execute);
+  resetBtn.addEventListener('click', () => {
+    engine.reset();
+    lastResult = null;
+    resultEl.innerHTML = '<div class="status">Run an instruction to see the state transition.</div>';
+    chainEl.innerHTML = '<div class="status">No facts yet.</div>';
+    renderState();
+    status('Session reset. Rules reloaded.', 'ok');
+    loadRules();
+  });
+
+  // --- boot ---
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  try {
+    await init();
+    engine = new EvoRuleEngine();
+    renderRulesets();
+    loadRules();
+    cmdEl.value = JSON.stringify(SAMPLES[currentId], null, 2);
+    status('Engine ready. ' + RULESETS[currentId].ruleCount + ' rules loaded — send an instruction.', 'ok');
+  } catch (e) {
+    status('WASM init failed: ' + e, 'err');
+  }
+</script>
+
+</body>
+</html>
