@@ -229,6 +229,23 @@ export function bench_load_rules(n, reps) {
 }
 
 /**
+ * wasm-bindgen export of [`engine_version`] (wasm32 only, same JS name).
+ * @returns {string}
+ */
+export function engine_version() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.engine_version();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * wasm-bindgen entry point (only compiled for wasm32).
  * @param {string} rules_json
  * @param {string} command_json

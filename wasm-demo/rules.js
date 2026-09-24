@@ -1546,6 +1546,149 @@ export const RULESETS = {
         }
       }
     ]
+  },
+  "io": {
+    "name": "External IO · effect layer",
+    "desc": "io_request → external resolve → deterministic replay (D11 contract)",
+    "ruleCount": 2,
+    "transform": [
+      {
+        "type": "branch",
+        "params": {
+          "domain": {
+            "type": "instruction",
+            "instruction_type": "notify_request"
+          },
+          "on_true": [
+            {
+              "type": "branch",
+              "params": {
+                "domain": {
+                  "type": "not",
+                  "inner": {
+                    "type": "exists",
+                    "path": "__exec__.payload.__io_result__"
+                  }
+                },
+                "on_true": [
+                  {
+                    "type": "io_request",
+                    "params": {
+                      "io_type": "call_service",
+                      "service_name": "__exec__.instruction.params.service_name",
+                      "args?": "__exec__.instruction.params.args"
+                    }
+                  }
+                ],
+                "on_false": [
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.data",
+                      "operation": "set",
+                      "value": "__exec__.instruction.params"
+                    }
+                  },
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.data.result.decision",
+                      "operation": "set",
+                      "value": "notified"
+                    }
+                  },
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.data.result.io_status",
+                      "operation": "set",
+                      "value": "__exec__.payload.__io_result__.status"
+                    }
+                  },
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.__io_result__",
+                      "operation": "set",
+                      "value": null
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "on_false": []
+        }
+      },
+      {
+        "type": "branch",
+        "params": {
+          "domain": {
+            "type": "instruction",
+            "instruction_type": "external_tool_request"
+          },
+          "on_true": [
+            {
+              "type": "branch",
+              "params": {
+                "domain": {
+                  "type": "not",
+                  "inner": {
+                    "type": "exists",
+                    "path": "__exec__.payload.__io_result__"
+                  }
+                },
+                "on_true": [
+                  {
+                    "type": "io_request",
+                    "params": {
+                      "io_type": "call_external",
+                      "tool_name": "__exec__.instruction.params.tool_name",
+                      "arguments?": "__exec__.instruction.params.arguments"
+                    }
+                  }
+                ],
+                "on_false": [
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.data",
+                      "operation": "set",
+                      "value": "__exec__.instruction.params"
+                    }
+                  },
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.data.result.decision",
+                      "operation": "set",
+                      "value": "executed"
+                    }
+                  },
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.data.result.io_status",
+                      "operation": "set",
+                      "value": "__exec__.payload.__io_result__.status"
+                    }
+                  },
+                  {
+                    "type": "set",
+                    "params": {
+                      "attr": "__exec__.payload.__io_result__",
+                      "operation": "set",
+                      "value": null
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "on_false": []
+        }
+      }
+    ]
   }
 };
 export const SAMPLES = {
@@ -1574,6 +1717,15 @@ export const SAMPLES = {
     "params": {
       "requested_permission": "admin",
       "user_role": "auditor"
+    }
+  },
+  "io": {
+    "type": "notify_request",
+    "params": {
+      "service_name": "approval-svc",
+      "args": {
+        "message": "expense 5000 needs approval"
+      }
     }
   }
 };

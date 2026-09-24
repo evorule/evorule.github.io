@@ -120,6 +120,12 @@
   .tm .v { font-size: 13px; color: var(--gold); font-weight: 700; min-width: 60px; }
   .tm .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
+  #io-resolve { margin-top: 16px; border: 1px solid var(--gold); border-radius: 10px; padding: 14px; background: rgba(212,175,55,0.05); }
+  #io-resolve .k { font-size: 12px; color: var(--gold); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  #io-resolve textarea { min-height: 64px; }
+  #io-resolve .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  #io-resolve .btnrow { margin-top: 10px; }
+
   footer { border-top: 1px solid var(--border); padding: 20px 0; text-align: center; color: var(--muted); font-size: 12px; }
   footer a { color: var(--gold); text-decoration: none; }
 
@@ -180,6 +186,15 @@
           <div class="status">Run an instruction to see the state transition.</div>
         </div>
 
+        <div id="io-resolve" style="display:none">
+          <div class="k">io_request pending — resolve &amp; replay</div>
+          <textarea id="io-result" spellcheck="false">{}</textarea>
+          <div class="btnrow">
+            <button id="resolve" class="btn btn-primary">Resolve &amp; Replay</button>
+          </div>
+          <div class="hint">The engine pauses instead of committing. Resolving injects the result as <code>__io_result__</code> and <b>replays <code>execute_transition</code> from the original inputs</b> — the D11 replay contract: nothing was recorded, the outcome is recomputed.</div>
+        </div>
+
         <h2 style="margin-top:22px;">BLAKE3 audit chain</h2>
         <div id="chain">
           <div class="status">No facts yet.</div>
@@ -202,11 +217,12 @@
 <footer>
   <div class="wrap">
     <p>Runs <code>evorule-wasm-demo</code> (AGPL-3.0) — <a href="https://github.com/evorule/evorule/tree/main/evorule-wasm-demo" target="_blank" rel="noopener">source</a> · Every decision provable, replayable, tamper-evident</p>
+    <p id="engine-version">engine: detecting…</p>
   </div>
 </footer>
 
 <script type="module">
-  import init, { EvoRuleEngine } from './pkg/evorule_wasm_demo.js';
+  import init, { EvoRuleEngine, engine_version } from './pkg/evorule_wasm_demo.js';
   import { RULESETS, SAMPLES } from './rules.js';
 
   const $ = (id) => document.getElementById(id);
@@ -214,6 +230,7 @@
   const cmdEl = $('cmd'), statusEl = $('status'), resultEl = $('result'), chainEl = $('chain');
   const tmEl = $('tm'), tmvEl = $('tmv');
   const runBtn = $('run'), resetBtn = $('reset');
+  const ioResolveEl = $('io-resolve'), ioResultEl = $('io-result'), resolveBtn = $('resolve');
 
   let engine = null;
   let currentId = Object.keys(RULESETS)[0];
@@ -258,6 +275,7 @@
   function loadRules() {
     try {
       engine.load_rules(JSON.stringify(RULESETS[currentId].transform));
+      ioResolveEl.style.display = 'none';
       renderSamples();
       status('Loaded ' + RULESETS[currentId].ruleCount + ' rules from ' + RULESETS[currentId].name, 'ok');
     } catch (e) {
@@ -281,13 +299,52 @@
     }
     try {
       const res = JSON.parse(engine.execute_instruction(JSON.stringify(cmd)));
-      lastResult = res;
-      renderResult(res);
-      renderChain();
-      renderState();
-      status('Committed to audit chain · version ' + (res.version ?? res.type), 'ok');
+      handleOutcome(res, 'Committed to audit chain · version ' + (res.version ?? res.type));
     } catch (e) {
       status('execute_instruction failed: ' + e, 'err');
+    }
+  }
+
+  // Shared outcome handling for execute_instruction and resolve_io (replay).
+  function handleOutcome(res, okMsg) {
+    lastResult = res;
+    renderResult(res);
+    renderChain();
+    renderState();
+    if (res.type === 'io_required') {
+      ioResolveEl.style.display = '';
+      if (!ioResultEl.value.trim()) ioResultEl.value = '{"status":"ok"}';
+      status('Engine paused on io_request (' + (res.io_type ?? 'external') + ') — resolve it to replay the instruction.', 'ok');
+    } else if (res.type === 'halted') {
+      ioResolveEl.style.display = 'none';
+      status('Halted by rule #' + res.rule_index + ' — recorded on the chain as a Violation: ' + res.reason);
+    } else if (res.type === 'ignored') {
+      ioResolveEl.style.display = 'none';
+      status('Instruction ignored (no rule matched) — trace appended to the audit chain.');
+    } else {
+      ioResolveEl.style.display = 'none';
+      ioResultEl.value = '';
+      status(okMsg, 'ok');
+    }
+  }
+
+  // --- resolve & replay (D11 contract) ---
+  function resolveIo() {
+    let ioResult;
+    try {
+      ioResult = JSON.parse(ioResultEl.value);
+    } catch (e) {
+      status('Invalid io_result JSON: ' + e.message, 'err');
+      return;
+    }
+    try {
+      const res = JSON.parse(engine.resolve_io(JSON.stringify(ioResult)));
+      handleOutcome(
+        res,
+        'Resolved & replayed from original inputs — committed to audit chain · version ' + (res.version ?? res.type)
+      );
+    } catch (e) {
+      status('resolve_io failed: ' + e, 'err');
     }
   }
 
@@ -345,9 +402,12 @@
 
   // --- wire buttons ---
   runBtn.addEventListener('click', execute);
+  resolveBtn.addEventListener('click', resolveIo);
   resetBtn.addEventListener('click', () => {
     engine.reset();
     lastResult = null;
+    ioResolveEl.style.display = 'none';
+    ioResultEl.value = '';
     resultEl.innerHTML = '<div class="status">Run an instruction to see the state transition.</div>';
     chainEl.innerHTML = '<div class="status">No facts yet.</div>';
     renderState();
@@ -366,6 +426,7 @@
     renderRulesets();
     loadRules();
     cmdEl.value = JSON.stringify(SAMPLES[currentId], null, 2);
+    $('engine-version').textContent = 'engine: ' + engine_version();
     status('Engine ready. ' + RULESETS[currentId].ruleCount + ' rules loaded — send an instruction.', 'ok');
   } catch (e) {
     status('WASM init failed: ' + e, 'err');
