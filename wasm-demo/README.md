@@ -12,8 +12,6 @@ execution, BLAKE3 audit chain, time machine, and (since 2026-09-24) the full
 - `pkg/` — wasm-bindgen artifact, synced from the engine crate.
 - `build-rules.js` — regenerates `rules.js`.
 - `deploy.mjs` — syncs `pkg/` from the engine crate build.
-- `io_flow_test.mjs` — regression gate for the D11 io flow (`node io_flow_test.mjs`,
-  15 checks; run after any pkg or rules.js refresh).
 
 ## Refresh flow
 
