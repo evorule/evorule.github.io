@@ -44,6 +44,26 @@ export class EvoRuleEngine {
         }
     }
     /**
+     * Offline verification export: per-fact chain metadata PLUS the exact
+     * stable-JSON text that was hashed (the verifier's input). Consumers may
+     * edit `stable_json` freely and re-run [`verify_exported_chain`] — a
+     * tampered byte breaks the content hash at that entry and cascades to
+     * every later link. This is what the live demo's tamper view is built on.
+     * @returns {string}
+     */
+    export_chain() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.evoruleengine_export_chain(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Full audit chain: one entry per fact, with fact_id / fact_type /
      * logical_time / content_hash / prev_hash / cause.
      * @returns {string}
@@ -171,6 +191,119 @@ export class EvoRuleEngine {
 if (Symbol.dispose) EvoRuleEngine.prototype[Symbol.dispose] = EvoRuleEngine.prototype.free;
 
 /**
+ * One scripted LLM call session on the real audit mechanism.
+ */
+export class LlmAuditSession {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        LlmAuditSessionFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_llmauditsession_free(ptr, 0);
+    }
+    /**
+     * @returns {string}
+     */
+    audit_chain() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.llmauditsession_audit_chain(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {string} messages_json
+     * @returns {string}
+     */
+    begin_call(messages_json) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(messages_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.llmauditsession_begin_call(this.__wbg_ptr, ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    export_chain() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.llmauditsession_export_chain(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {string} response_json
+     * @returns {string}
+     */
+    respond(response_json) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(response_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.llmauditsession_respond(this.__wbg_ptr, ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * @returns {boolean}
+     */
+    verify() {
+        const ret = wasm.llmauditsession_verify(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @param {string} model
+     */
+    constructor(model) {
+        const ptr0 = passStringToWasm0(model, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.llmauditsession_with_model(ptr0, len0);
+        this.__wbg_ptr = ret;
+        LlmAuditSessionFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+}
+if (Symbol.dispose) LlmAuditSession.prototype[Symbol.dispose] = LlmAuditSession.prototype.free;
+
+/**
  * Dimension 3: append `n` facts to a pure-memory FactsLog, then
  * Auditor.audit_new() + verify() (BLAKE3 content hash + chain verify).
  * @param {number} n
@@ -267,10 +400,37 @@ export function run_demo(rules_json, command_json) {
         wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
 }
+
+/**
+ * wasm-bindgen export of the offline verifier (same JSON-in/JSON-out
+ * contract as the native [`verify_exported_chain_impl`]).
+ * @param {string} entries_json
+ * @returns {string}
+ */
+export function verify_chain_json(entries_json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(entries_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.verify_chain_json(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
-        __wbg___wbindgen_throw_5d9e815e6fdf150f: function(arg0, arg1) {
+        __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
@@ -297,6 +457,9 @@ function __wbg_get_imports() {
 const EvoRuleEngineFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_evoruleengine_free(ptr, 1));
+const LlmAuditSessionFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_llmauditsession_free(ptr, 1));
 
 function getStringFromWasm0(ptr, len) {
     return decodeText(ptr >>> 0, len);
