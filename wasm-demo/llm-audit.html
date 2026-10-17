@@ -201,14 +201,15 @@
     const div = document.createElement('div');
     div.className = 'msg ' + who;
     div.innerHTML = `<div class="who">${who}</div><div>${text}</div>` +
-      (tok ? `<div class="tok">tokens: ${tok.prompt} prompt · ${tok.completion} completion · ${tok.total} total</div>` : '');
+      (tok ? `<div class="tok">tokens: ${tok.prompt_tokens} prompt · ${tok.completion_tokens} completion · ${tok.total_tokens} total</div>` : '');
     convoEl.appendChild(div);
   }
 
   function renderChain(entries, report) {
-    const brokenFrom = report && report.first_broken_index !== null ? report.first_broken_index : null;
+    const brokenFrom = report && report.first_broken_index !== null
+      ? report.first_broken_index : Number.POSITIVE_INFINITY;
     const rows = entries.map((e, i) => {
-      const state = report ? (i >= brokenFrom ? 'broken' : 'ok') : 'ok';
+      const state = report && i >= brokenFrom ? 'broken' : 'ok';
       const marks = report
         ? `<span class="mini">content:${report.entries[i].content_ok ? '✓' : '✗'} link:${report.entries[i].link_ok ? '✓' : '✗'}</span>`
         : '';
@@ -244,6 +245,10 @@
     statusEl.textContent = 'LLM call #2 (history includes the tool result)…';
     await sleep(420);
     session.begin_call(MSGS2);
+
+    statusEl.textContent = 'LLM call #2 → command + io_request facts appended…';
+    await sleep(420);
+    session.respond(JSON.stringify(FINAL));
 
     bubble('assistant', FINAL.content, FINAL.token_usage);
     statusEl.textContent = 'io_response fact #2 appended → sealing the call…';
