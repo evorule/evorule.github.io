@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: CC0-1.0
-// deploy.mjs — sync the freshly built wasm pkg from the evorule workspace into
-// this directory (the GitHub Pages source of the live demo).
+// deploy.mjs — sync the freshly built wasm pkg from the standalone
+// evorule-wasm-demo repo into this directory (the GitHub Pages source of the
+// live demo). (2026-10-17: the demo moved out of the kernel workspace to its
+// own repo at D:\evorule-wasm-demo.)
 //
 // Full refresh flow:
-//   1. cd D:\evorule\evorule-wasm-demo && wasm-pack build --target web --out-dir pkg
+//   1. cd D:\evorule-wasm-demo && wasm-pack build --target web --out-dir pkg
 //   2. node build-rules.js            (in this dir — regenerate rules.js)
 //   3. node deploy.mjs                (in this dir — sync pkg/)
 //   4. git add -A && git commit && git push   (Pages redeploys automatically)
@@ -20,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SRC =
   process.env.EVORULE_WASM_PKG ||
-  path.join(HERE, '..', '..', 'evorule', 'evorule-wasm-demo', 'pkg');
+  path.join(HERE, '..', '..', 'evorule-wasm-demo', 'pkg');
 const DEST = path.join(HERE, 'pkg');
 
 const REQUIRED = [
