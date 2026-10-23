@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM 活动存证：能力与边界 · EvoRule</title>
+  <meta name="description" content="evo-agent 对 AI 模型每次调用的存证做到了哪一级、哪些尚未覆盖、为什么这样取舍——逐条如实说明。已做到的附验证方法，未做到的写明原因。" />
+  <style>
+    :root {
+      --gold: #D4AF37; --gold-light: #F0D27A;
+      --bg: #0d1117; --card: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #9aa7b8;
+      --green: #8FBF6B; --red: #C96A5B; --amber: #D9A94E;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.7; }
+    a { color: var(--gold-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { background: rgba(13,17,23,0.92); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
+    nav { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between;
+      align-items: center; padding: 14px 24px; }
+    nav .brand { font-weight: 700; color: var(--gold); letter-spacing: .5px;
+      display: inline-flex; align-items: center; gap: 9px; }
+    nav .brand svg { display: block; flex: none; }
+    nav .links a { color: var(--muted); margin-left: 18px; font-size: 14px; }
+    nav .links a:hover { color: var(--gold-light); text-decoration: none; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    .hero { padding: 48px 0 30px; }
+    .hero h1 { font-size: 30px; margin-bottom: 12px; }
+    .hero p { color: var(--muted); max-width: 840px; }
+    .badges { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+      font-size: 12.5px; color: var(--muted); }
+    .badge.ok { color: var(--green); border-color: var(--green); }
+    .badge.off { color: var(--red); border-color: var(--red); }
+    section { padding: 26px 0; }
+    h2 { font-size: 19px; margin-bottom: 6px; }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+    .tiers { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    @media (max-width: 880px) { .tiers { grid-template-columns: 1fr; } }
+    .tier { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .tier .lv { font-size: 12px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+    .tier h3 { font-size: 17px; margin: 6px 0 4px; }
+    .tier .state { font-size: 12.5px; margin-bottom: 10px; }
+    .tier .state.on { color: var(--green); }
+    .tier .state.off { color: var(--red); }
+    .tier p { font-size: 13.5px; color: var(--muted); }
+    .tier .q { margin-top: 10px; font-size: 13px; color: var(--text);
+      border-left: 3px solid var(--gold); padding-left: 10px; }
+    table { width: 100%; border-collapse: collapse; background: var(--card);
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 14px; }
+    th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--gold-light); font-weight: 600; font-size: 13px; background: rgba(212,175,55,0.06); }
+    tr:last-child td { border-bottom: none; }
+    .mark { font-weight: 700; white-space: nowrap; }
+    .mark.yes { color: var(--green); }
+    .mark.no { color: var(--red); }
+    .mark.part { color: var(--amber); }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 880px) { .cards { grid-template-columns: 1fr; } }
+    .bcard { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--amber);
+      border-radius: 10px; padding: 16px 18px; }
+    .bcard h4 { font-size: 14.5px; color: var(--gold-light); margin-bottom: 6px; }
+    .bcard p { font-size: 13.5px; color: var(--muted); }
+    ol.principles { padding-left: 22px; color: var(--muted); font-size: 14px; }
+    ol.principles li { margin-bottom: 10px; }
+    ol.principles b { color: var(--text); }
+    .verify { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    pre { background: #0a0d12; border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace; }
+    pre .c { color: var(--muted); }
+    .verify .note { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+    .more { margin-top: 14px; font-size: 14px; color: var(--muted); }
+    footer { border-top: 1px solid var(--border); margin-top: 30px; padding: 22px 0 34px;
+      color: var(--muted); font-size: 13px; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<header>
+  <nav>
+    <a class="brand" href="index.html" aria-label="EvoRule 首页">
+      <svg width="22" height="22" viewBox="0 0 960 960" role="img" aria-hidden="true">
+        <circle cx="480" cy="480" r="440" fill="none" stroke="#D4AF37" stroke-width="52"/>
+        <rect x="180" y="310" width="600" height="80" rx="8" fill="#D4AF37"/>
+        <rect x="180" y="570" width="600" height="80" rx="8" fill="#D4AF37"/>
+      </svg>
+      EvoRule
+    </a>
+    <div class="links">
+      <a href="index.html">首页</a>
+      <a href="audit-chain.html">白皮书</a>
+      <a href="audit-as-memory.html">审计即记忆</a>
+      <a href="evid.html">EVID</a>
+      <a href="wasm-demo/llm-audit.html">审计演示</a>
+      <a href="https://github.com/evorule">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>对 AI 的每一次调用，我们存证到哪一级</h1>
+    <p>这不是一份营销页。它逐条说明 evo-agent 对 LLM 活动——每次模型调用的发送、返回、组装全过程——的存证做到了什么、哪些尚未覆盖、为什么这样取舍。<b>已做到的附验证方法，未做到的写明原因。</b></p>
+    <div class="badges">
+      <span class="badge ok">第一级 · 内容全文级 — 已实现</span>
+      <span class="badge ok">第二级 · 发送字节级 — 已实现</span>
+      <span class="badge off">第三级 · 线路字节级 — 未建（如实标注）</span>
+    </div>
+  </div>
+
+  <section>
+    <h2>三级存证标尺</h2>
+    <p class="sub">"字节级存证"不是开关，是一条按捕获点分层的递进标尺。越往下越接近"线上真实发生的字节"。</p>
+    <div class="tiers">
+      <div class="tier">
+        <div class="lv">第一级</div>
+        <h3>内容全文级</h3>
+        <div class="state on">✓ 已实现</div>
+        <p>发给模型的消息全文与模型返回的全文，逐字写入防篡改哈希链。无抽样、无日志级别过滤、无长度截断；摘要类辅助调用同样入链，不存在绕开审计的出站路径。</p>
+        <div class="q">回答："当时到底发了什么、模型到底回了什么？"</div>
+      </div>
+      <div class="tier">
+        <div class="lv">第二级</div>
+        <h3>发送字节级</h3>
+        <div class="state on">✓ 已实现</div>
+        <p>发送内容的确定性序列化字节（消息集合＋核心生成参数）的哈希，在发送时刻入链。任何人可用链上材料重建发送内容并重算哈希比对；裁剪边界（裁了多少条）同时在账。</p>
+        <div class="q">回答："事后重建的发送内容，与当时实际发送的一致吗？"</div>
+      </div>
+      <div class="tier">
+        <div class="lv">第三级</div>
+        <h3>线路字节级</h3>
+        <div class="state off">✗ 未建 · 如实标注</div>
+        <p>网络线路上实际传输的原始字节（含提供商自己的序列化细节、流式帧序）的哈希。捕获点不在本进程（TLS 在独立执行体终结）——补法已定，按真实争议场景投入，不做无时间表的承诺。</p>
+        <div class="q">将回答："提供商线上实际返回的原始字节是什么？"</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>什么能检出，什么不能</h2>
+    <p class="sub">七类攻击的覆盖现状——包括两行我们不覆盖的。诚实标注比全绿更有价值。</p>
+    <table>
+      <tr><th>攻击</th><th>结果</th><th>依赖</th></tr>
+      <tr><td>篡改链上记录内容（改一条消息 / 回答）</td><td class="mark yes">✓ 检出</td><td>哈希链断裂即红</td></tr>
+      <tr><td>隐瞒一次模型调用（"影子调用"）</td><td class="mark yes">✓ 已归零</td><td>全路径经审计协议＋双账本对账</td></tr>
+      <tr><td>事后伪造"当时发送的内容"</td><td class="mark yes">✓ 检出</td><td>重建哈希 ≠ 发送时刻存证哈希</td></tr>
+      <tr><td>篡改存证记录本身</td><td class="mark yes">✓ 检出</td><td>存证与业务事实同链</td></tr>
+      <tr><td>整链重算伪造（内容改完重算全部哈希）</td><td class="mark yes">✓ 检出</td><td>签名锚点绑定失败</td></tr>
+      <tr><td>流式聚合过程出错或被替换（"模型说的" ≠ "交付的"）</td><td class="mark no">✗ 未覆盖</td><td>属第三级——见上方边界</td></tr>
+      <tr><td>与提供商的内容纠纷（"模型实际返回 X 不是 Y"）</td><td class="mark part">△ 可追责</td><td>凭请求追踪标识对质；不可密码学证明</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>诚实边界</h2>
+    <p class="sub">这些是当前的真实边界，不是疏忽，是写明的取舍。</p>
+    <div class="cards">
+      <div class="bcard">
+        <h4>存证哈希域未含全部请求参数</h4>
+        <p>发送存证的哈希覆盖 模型名＋温度＋消息集合；同样影响生成结果的 max_tokens、工具定义等参数<b>未入哈希域</b>——已知边界，列为收紧候选，不以"发送字节级"四字掩盖。</p>
+      </div>
+      <div class="bcard">
+        <h4>提供商真实性不可证明</h4>
+        <p>主流模型 API 不对响应签名。存证只能绑定"我们收到了什么"，不能证明"对方发出了什么"。争议时可凭请求追踪标识向提供商对质——追责可以，证明不行。</p>
+      </div>
+      <div class="bcard">
+        <h4>流式聚合是信任点</h4>
+        <p>"多个流式增量 → 最终整包"的变换在独立执行体内完成，其正确性当前靠代码审查与版本记录，不靠密码学绑定。第三级建成后双端哈希锁定此变换。</p>
+      </div>
+      <div class="bcard">
+        <h4>时间戳不参与哈希</h4>
+        <p>时间是非确定性字段，不进任何哈希域；时序争议由链上顺序与签名锚点的时间承载。引擎短暂不可达时存证降级告警，本地全文账本始终独立在账。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>取舍原则</h2>
+    <ol class="principles">
+      <li><b>哈希可以旅行，字节不必</b>——捕获点本地算哈希、哈希入链；原始字节不默认上链（体积、隐私、成本）。</li>
+      <li><b>存证与留存分层</b>——链上存哈希与元数据（轻、可验、永久），本地账本存全文（重、可对账），两者各有独立哈希链互为印证。</li>
+      <li><b>不建新链</b>——新证据类型一律走既有哈希链，自动被锚点、哨兵、公开证据投影覆盖；多一条链就多一处分叉与对账成本。</li>
+      <li><b>边界先于路线</b>——未覆盖的能力先写进边界再谈路线，不拿计划中的能力充当现有能力，不做无时间表的承诺。</li>
+      <li><b>按真实争议场景投入</b>——第三级的增量集中在外部纠纷与合规要求；场景真实出现前，投入属于过度工程。</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>自己验</h2>
+    <p class="sub">不需要安装 evo-agent——一个 Python 脚本加一个 blake3 库，离线验完。</p>
+    <div class="verify">
+      <pre><span class="c"># 导出证据文档（evo-agent 侧）</span>
+evid_export --journal data/sessions/{id}.jsonl -o evidence.json
+
+<span class="c"># 验证（任何第三方；单文件验证器）</span>
+pip install blake3
+python evid_verify.py evidence.json                  <span class="c"># 链完整性，篡改六分类定位</span>
+python evid_verify.py evidence.json --pubkey &lt;hex&gt;   <span class="c"># ＋ Ed25519 签名验证</span></pre>
+      <p class="note">验证器自带自检（python evid_verify.py --self-test，4/4 通过方可信）；跨语言哈希契约由黄金向量双向锁定并常驻 CI——不靠注释宣称兼容。</p>
+      <p class="more">延伸：完整能力声明与验证命令见 <a href="https://github.com/evorule/evo-agent/blob/main/docs/llm-attestation.md">docs/llm-attestation.md</a> · 审计链体系全貌见 <a href="audit-chain.html">白皮书网页版</a> 与 <a href="https://github.com/evorule/evo-agent/blob/main/docs/audit-chain-whitepaper.md">仓库文档</a> · 动手试篡改检测见 <a href="wasm-demo/llm-audit.html">交互演示</a></p>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>本页为消费者摘要；权威正本为仓库文档，内容对应 2026-10-23 版本。</span>
+    <span>EvoRule Project · <a href="https://github.com/evorule">GitHub</a> · <a href="https://gitee.com/evorule">Gitee</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVID：故意丢弃密钥的证据链 · EvoRule</title>
+  <meta name="description" content="EVID 的第一个设计决策是把密钥扔掉——用无密钥的哈希链换取任何第三方零依赖跨语言可验的公开证据。原创设计的第一性原理、两代教训与字节级契约。" />
+  <style>
+    :root {
+      --gold: #D4AF37; --gold-light: #F0D27A;
+      --bg: #0d1117; --card: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #9aa7b8;
+      --green: #8FBF6B; --red: #C96A5B; --amber: #D9A94E;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.7; }
+    a { color: var(--gold-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { background: rgba(13,17,23,0.92); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
+    nav { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between;
+      align-items: center; padding: 14px 24px; }
+    nav .brand { font-weight: 700; color: var(--gold); letter-spacing: .5px;
+      display: inline-flex; align-items: center; gap: 9px; }
+    nav .brand svg { display: block; flex: none; }
+    nav .links a { color: var(--muted); margin-left: 15px; font-size: 14px; }
+    nav .links a:hover { color: var(--gold-light); text-decoration: none; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    .hero { padding: 46px 0 26px; }
+    .hero .kicker { font-size: 13px; letter-spacing: 2px; color: var(--gold);
+      text-transform: uppercase; margin-bottom: 8px; }
+    .hero h1 { font-size: 30px; margin-bottom: 12px; }
+    .hero p { color: var(--muted); max-width: 860px; font-size: 15.5px; }
+    .badges { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+      font-size: 12.5px; color: var(--muted); }
+    .badge.gold { color: var(--gold); border-color: var(--gold); }
+    section { padding: 26px 0; }
+    h2 { font-size: 20px; margin-bottom: 6px; }
+    h2 .no { color: var(--gold); font-size: 14px; letter-spacing: 2px; display: block; margin-bottom: 4px; }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+    p.body { color: var(--text); font-size: 15px; margin-bottom: 12px; max-width: 860px; }
+    p.body b { color: var(--gold-light); }
+    .pull { background: rgba(212,175,55,0.06); border: 1px solid var(--gold);
+      border-radius: 10px; padding: 16px 20px; font-size: 16px; margin: 14px 0; }
+    .pull b { color: var(--gold-light); }
+    table { width: 100%; border-collapse: collapse; background: var(--card);
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 14px; }
+    th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--gold-light); font-weight: 600; font-size: 13px; background: rgba(212,175,55,0.06); }
+    tr:last-child td { border-bottom: none; }
+    td .dead { color: var(--red); }
+    td .fix { color: var(--green); }
+    pre { background: #0a0d12; border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+      margin: 10px 0; }
+    pre .c { color: var(--muted); }
+    .stack { margin: 14px 0; max-width: 640px; }
+    .slayer { border: 1px solid var(--gold); border-radius: 10px; padding: 13px 18px;
+      background: var(--card); }
+    .slayer + .slayer { margin-top: 8px; }
+    .slayer .t { font-size: 15px; font-weight: 700; color: var(--gold-light); }
+    .slayer .d { font-size: 13px; color: var(--muted); }
+    .slayer.nested-host { border-style: dashed; }
+    .slayer.evid { margin: 10px 14px 2px; border-color: var(--amber);
+      background: rgba(212,175,55,0.05); }
+    .slayer.evid .t { color: var(--amber); }
+    .story { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--red);
+      border-radius: 0 10px 10px 0; padding: 16px 20px; margin: 14px 0; font-size: 15px; }
+    .story b { color: var(--gold-light); }
+    .bcard { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--amber);
+      border-radius: 0 10px 10px 0; padding: 14px 18px; margin-bottom: 10px; }
+    .bcard h4 { font-size: 14.5px; color: var(--gold-light); margin-bottom: 6px; }
+    .bcard p { font-size: 13.5px; color: var(--muted); }
+    .more { font-size: 14px; color: var(--muted); margin-top: 14px; }
+    footer { border-top: 1px solid var(--border); margin-top: 30px; padding: 22px 0 34px;
+      color: var(--muted); font-size: 13px; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<header>
+  <nav>
+    <a class="brand" href="index.html" aria-label="EvoRule 首页">
+      <svg width="22" height="22" viewBox="0 0 960 960" role="img" aria-hidden="true">
+        <circle cx="480" cy="480" r="440" fill="none" stroke="#D4AF37" stroke-width="52"/>
+        <rect x="180" y="310" width="600" height="80" rx="8" fill="#D4AF37"/>
+        <rect x="180" y="570" width="600" height="80" rx="8" fill="#D4AF37"/>
+      </svg>
+      EvoRule
+    </a>
+    <div class="links">
+      <a href="index.html">首页</a>
+      <a href="audit-chain.html">白皮书</a>
+      <a href="llm-attestation.html">存证能力</a>
+      <a href="audit-as-memory.html">审计即记忆</a>
+      <a href="wasm-demo/llm-audit.html">演示</a>
+      <a href="https://github.com/evorule">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="kicker">EVID · 原创设计</div>
+    <h1>故意丢弃密钥的证据链</h1>
+    <p>大多数密码学体系想尽办法把密钥守住；EVID 的第一步设计决策，是把密钥扔掉。这一扔，换来了任何第三方零依赖跨语言可验的公开证据——也换来一条必须写进基因的铁律。</p>
+    <div class="badges">
+      <span class="badge gold">无密钥 · 公开可验</span>
+      <span class="badge gold">单文件验证器</span>
+      <span class="badge">字节级契约 · 双向锁定</span>
+      <span class="badge">七连破坏注入 · CI 常驻</span>
+    </div>
+  </div>
+
+  <section>
+    <h2><span class="no">一</span>第一个决策：把密钥扔掉</h2>
+    <p class="body">一条证据链要"公开可验"，直觉的做法是：保留签名，把公钥一起发布，谁都能验签。我们没有这样做。<b>EVID 投影层不含任何密钥</b>——证据文档里只有无密钥的内容哈希链，每一环是前七字段因果元组的 BLAKE3 哈希，任何人拿到文档都能逐环重算。</p>
+    <p class="body">因为"验签"这道门槛比看上去高：验证方需要理解签名体系、需要正确的公钥、需要信任公钥的分发渠道。而<b>重算一条无密钥的哈希链，只需要哈希函数本身</b>——一个 Python 单文件脚本加一个 blake3 库，离线、断网、不装任何本系统软件，十分钟验完整条证据链。</p>
+    <p class="body"><b>密钥换公开性</b>：扔掉密钥的所得，是"任何第三方、零依赖、跨语言"这六个字；所失，是下一节。</p>
+  </section>
+
+  <section>
+    <h2><span class="no">二</span>由此推出的铁律</h2>
+    <p class="sub">扔掉密钥的直接后果：任何人都能构造一条合法的伪造 EVID 链。</p>
+    <div class="pull"><b>EVID 永远不能单独作为"执行确实发生过"的证据。</b>它必须与签名锚点联用——三层各司其职，缺一不可。</div>
+    <table>
+      <tr><th>层</th><th>证明什么</th><th>凭什么</th></tr>
+      <tr><td><b>事实哈希链</b></td><td>内部自洽</td><td>逐环链接，改任何一环即断</td></tr>
+      <tr><td><b>签名锚点链</b></td><td>来源可信</td><td>Ed25519 签名——无私钥造不出能通过绑定的假锚</td></tr>
+      <tr><td><b>EVID 投影</b></td><td>公开可验</td><td>无密钥、标准格式、单文件验证器</td></tr>
+    </table>
+    <p class="body" style="margin-top:14px">一个类比：哈希链是账本本身，签名锚点是盖章，EVID 是<b>任何人都能拿去对光的复印件</b>——复印件可以伪造，所以复印件上的章（锚点绑定）才是关键；而验复印件真伪不需要到我们柜台，这正是复印件存在的意义。</p>
+  </section>
+
+  <section>
+    <h2><span class="no">三</span>两代收敛：完整设计与假兼容</h2>
+    <p class="sub">这个理念经历两代独立演进。第一代设计完整却从未接线；其声称的跨语言兼容经实测为假——两种语言算出不同的值。从那天起立下规矩：跨语言兼容不靠声明，靠对拍。</p>
+    <p class="body">第二代不是移植，是在已验证的三层审计体系之上重建。第一代的教训逐条变成防线：</p>
+    <table>
+      <tr><th>第一代的坑</th><th>第二代的防线</th></tr>
+      <tr><td><span class="dead">布尔/整数编码分裂</span></td><td><span class="fix">七字段全部字符串化或显式 null</span></td></tr>
+      <tr><td><span class="dead">域判定整链一个常量、非域事实虚设值</span></td><td><span class="fix">逐记录取真实值，无则 null——参与哈希但不造假</span></td></tr>
+      <tr><td><span class="dead">规则身份硬编码进哈希域</span></td><td><span class="fix">不重复存身份——fact_hash 回溯原链</span></td></tr>
+      <tr><td><span class="dead">三套状态哈希排除集各不相同</span></td><td><span class="fix">不重复算状态哈希——事实链自身承载因果</span></td></tr>
+      <tr><td><span class="dead">签名可移植到不同长度的链</span></td><td><span class="fix">签名载荷覆盖链长度——短链签名冒充长链不可通过</span></td></tr>
+      <tr><td><span class="dead">删尾攻击无专项检出</span></td><td><span class="fix">tail_truncated 专项分类</span></td></tr>
+      <tr><td><span class="dead">同密钥换链内容不可区分</span></td><td><span class="fix">chain_substituted 专项分类</span></td></tr>
+      <tr><td><span class="dead">一个从未被触发的篡改分类占着位置</span></td><td><span class="fix">删掉，不继承——没有实测支撑的分类是装饰</span></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="no">四</span>先定义后实现：字节级契约</h2>
+    <p class="sub">施工顺序是刻意的：先写死哈希契约的字节级定义，再写实现。</p>
+<pre>evid_hash = BLAKE3( canonical_json([
+    str(seq),            <span class="c">// 序号——十进制字符串</span>
+    step_id,             <span class="c">// 步骤标识</span>
+    fact_type,           <span class="c">// 事实类型</span>
+    cause | null,        <span class="c">// 因果前驱</span>
+    previous_evid,       <span class="c">// 前条哈希（空=创世）</span>
+    fact_hash,           <span class="c">// 原始审计链内容哈希</span>
+    domain_check | null  <span class="c">// 域判定</span>
+]))</pre>
+    <p class="body">契约的锁定方式是<b>双向的</b>：五组黄金向量加创世根，由 Python <b>独立推导</b>出期望值，Rust 测试<b>逐值断言</b>。不是 Rust 算完 Python 抄一遍——是两边各自从契约文本独立走到数值，在中间碰头。任一实现漂移，CI 即红。</p>
+  </section>
+
+  <section>
+    <h2><span class="no">五</span>验收门前置：让破坏在施工期就发生</h2>
+    <p class="sub">七连破坏注入：改字段、删中间记录、插入记录、删尾、整链重算+旧签名、同密钥不同链、验证器自检——逐项断言退出码与篡改分类。</p>
+    <div class="story">这扇门在施工期就咬人了：首轮实跑 <b>8 项中 3 项不达标</b>——序号错位检查抢先短路吞掉了"删记录/插记录"的精确分类；链替换精化发生在结果打印之后（改了标签没人看得见）；删尾时把必然伴随的根失配与删尾本身重复报告。三处都是真缺陷，当场修复后 8/8 全过，并成为 CI 常驻步骤。</div>
+    <p class="body">这件事强化了一条工程信念：<b>验收门的价值在于它开在施工期里，而不是施工期外。</b>等上线后再注入，同一批缺陷就是三个事故报告。</p>
+  </section>
+
+  <section>
+    <h2><span class="no">六</span>它在体系中的位置</h2>
+    <div class="stack">
+      <div class="slayer"><div class="t">签名锚点链（防抵赖 · 密钥层）</div><div class="d">Ed25519 · 链头绑定 · 密钥不落审计资产</div></div>
+      <div class="slayer nested-host"><div class="t">事实哈希链（防篡改 · 内部层）</div><div class="d">BLAKE3 · 逐条链接 · write-ahead · 崩溃恢复</div>
+        <div class="slayer evid"><div class="t">EVID 公开投影（公开可验层）</div><div class="d">无密钥 · 标准格式 · 单文件验证器 · chain_root ← 锚点签名绑定</div></div>
+      </div>
+      <div class="slayer"><div class="t">运行时哨兵 + 跨语言对拍（互证层）</div><div class="d">基线比对 · 黄金向量 · CI 强制对拍</div></div>
+    </div>
+    <p class="body">EVID 不替代任何一层。它是审计链的<b>公开面</b>——把"内部可信"翻译成"公开可验"。内部三层解决"账是真的"；EVID 解决"外人也能查这本账"，而不需要成为外人也能改的账。</p>
+  </section>
+
+  <section>
+    <h2><span class="no">七</span>诚实边界</h2>
+    <div class="bcard"><h4>伪造 EVID 链可构造</h4><p>设计使然，代价公开记账。防护=签名锚点联用（第二节铁律）。</p></div>
+    <div class="bcard"><h4>验证器自身需要被信任吗？</h4><p>不需要——自带四项自检（有效链通过/篡改链拒绝/确定性/删尾检测），哈希契约由黄金向量双向锁定；不放心可用任何语言按契约自写，二十行。</p></div>
+    <div class="bcard"><h4>时间戳不参与哈希</h4><p>时间非确定；证据文档创建时间从链尾记录派生（同输入同输出），不取验证时的时钟。</p></div>
+    <div class="bcard"><h4>不做的三件事</h4><p>不重做内部哈希链（投影引用不重算）；不新定编码规范（沿用全站契约）；不建独立信任根（信任归锚点层）。</p></div>
+  </section>
+
+  <section>
+    <h2><span class="no">八</span>亲手验</h2>
+<pre><span class="c"># 导出证据文档</span>
+evid_export --journal data/sessions/{id}.jsonl -o evidence.json
+
+<span class="c"># 验证（任何第三方）</span>
+pip install blake3
+python evid_verify.py evidence.json                 <span class="c"># 链完整性（篡改六分类）</span>
+python evid_verify.py evidence.json --pubkey &lt;hex&gt;  <span class="c"># + Ed25519 验签（长度防移植）</span>
+python evid_verify.py --self-test                   <span class="c"># 验证器自检 4/4</span></pre>
+    <p class="more">延伸：体系全貌见 <a href="audit-chain.html">审计链白皮书</a> · 存证能力等级见 <a href="llm-attestation.html">存证能力页</a> · 架构理念见 <a href="audit-as-memory.html">审计即记忆</a> · 完整设计文档见 <a href="https://github.com/evorule/evo-agent/blob/main/docs/evid-design.md">docs/evid-design.md</a> · 动手试篡改见 <a href="wasm-demo/llm-audit.html">交互演示</a></p>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>本页为设计叙事；权威正本为仓库文档，内容对应 2026-10-23 版本。</span>
+    <span>EvoRule Project · <a href="https://github.com/evorule">GitHub</a> · <a href="https://gitee.com/evorule">Gitee</a></span>
+  </div>
+</footer>
+</body>
+</html>

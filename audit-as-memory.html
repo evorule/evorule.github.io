@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>审计即记忆：可验证的 Agent 身份 · EvoRule</title>
+  <meta name="description" content="审计链是事实的唯一底座，记忆是从链上长出来的投影——记忆可以重建、可以审计、可以解释，唯独难以伪造。evo-agent 的架构理念与能力现状。" />
+  <style>
+    :root {
+      --gold: #D4AF37; --gold-light: #F0D27A;
+      --bg: #0d1117; --card: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #9aa7b8;
+      --green: #8FBF6B; --red: #C96A5B; --amber: #D9A94E;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.7; }
+    a { color: var(--gold-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { background: rgba(13,17,23,0.92); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
+    nav { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between;
+      align-items: center; padding: 14px 24px; }
+    nav .brand { font-weight: 700; color: var(--gold); letter-spacing: .5px;
+      display: inline-flex; align-items: center; gap: 9px; }
+    nav .brand svg { display: block; flex: none; }
+    nav .links a { color: var(--muted); margin-left: 15px; font-size: 14px; }
+    nav .links a:hover { color: var(--gold-light); text-decoration: none; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    .hero { padding: 48px 0 30px; }
+    .hero h1 { font-size: 30px; margin-bottom: 12px; }
+    .hero p { color: var(--muted); max-width: 860px; }
+    .badges { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+      font-size: 12.5px; color: var(--muted); }
+    .badge.gold { color: var(--gold); border-color: var(--gold); }
+    section { padding: 26px 0; }
+    h2 { font-size: 19px; margin-bottom: 6px; }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+    .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    @media (max-width: 880px) { .vs { grid-template-columns: 1fr; } }
+    .vs .col { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .vs .col.old { border-top: 3px solid var(--muted); }
+    .vs .col.new { border-top: 3px solid var(--gold); }
+    .vs h3 { font-size: 15px; margin-bottom: 10px; }
+    .vs .col.old h3 { color: var(--muted); }
+    .vs .col.new h3 { color: var(--gold-light); }
+    .vs li { font-size: 13.5px; color: var(--muted); margin-left: 18px; margin-bottom: 4px; }
+    .fold { background: rgba(212,175,55,0.06); border: 1px solid var(--gold);
+      border-radius: 10px; padding: 16px 20px; font-size: 15px; }
+    .fold b { color: var(--gold-light); }
+    .grid6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    @media (max-width: 880px) { .grid6 { grid-template-columns: 1fr; } }
+    .imp { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .imp .n { font-size: 12px; color: var(--gold); letter-spacing: 1px; }
+    .imp h3 { font-size: 15.5px; margin: 4px 0 8px; }
+    .imp p { font-size: 13px; color: var(--muted); }
+    .quote { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--gold);
+      border-radius: 0 10px 10px 0; padding: 18px 22px; margin-top: 16px; font-size: 16px; }
+    .quote .who { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    @media (max-width: 880px) { .facts { grid-template-columns: 1fr; } }
+    .fact { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 14px; font-size: 13.5px; display: flex; gap: 10px; align-items: baseline; }
+    .fact .tick { color: var(--green); font-weight: 700; flex: none; }
+    .fact span { color: var(--muted); }
+    .fact b { color: var(--text); font-weight: 600; }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 880px) { .cards { grid-template-columns: 1fr; } }
+    .bcard { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--amber);
+      border-radius: 10px; padding: 16px 18px; }
+    .bcard h4 { font-size: 14.5px; color: var(--gold-light); margin-bottom: 6px; }
+    .bcard p { font-size: 13.5px; color: var(--muted); }
+    ol.principles { padding-left: 22px; color: var(--muted); font-size: 14px; }
+    ol.principles li { margin-bottom: 10px; }
+    ol.principles b { color: var(--text); }
+    .more { font-size: 14px; color: var(--muted); }
+    footer { border-top: 1px solid var(--border); margin-top: 30px; padding: 22px 0 34px;
+      color: var(--muted); font-size: 13px; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<header>
+  <nav>
+    <a class="brand" href="index.html" aria-label="EvoRule 首页">
+      <svg width="22" height="22" viewBox="0 0 960 960" role="img" aria-hidden="true">
+        <circle cx="480" cy="480" r="440" fill="none" stroke="#D4AF37" stroke-width="52"/>
+        <rect x="180" y="310" width="600" height="80" rx="8" fill="#D4AF37"/>
+        <rect x="180" y="570" width="600" height="80" rx="8" fill="#D4AF37"/>
+      </svg>
+      EvoRule
+    </a>
+    <div class="links">
+      <a href="index.html">首页</a>
+      <a href="audit-chain.html">白皮书</a>
+      <a href="llm-attestation.html">存证能力</a>
+      <a href="evid.html">EVID</a>
+      <a href="wasm-demo/llm-audit.html">审计演示</a>
+      <a href="https://github.com/evorule">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>审计即记忆</h1>
+    <p>大多数 AI agent 有两个系统——记忆（为了有用）和日志（为了真实），两套存储、两种信任。evo-agent 只有一套：<b>审计链是事实的唯一底座，记忆是从链上长出来的投影。</b>记忆可以重建、可以审计、可以解释，唯独难以伪造。</p>
+    <div class="badges">
+      <span class="badge gold">链 = 唯一事实源</span>
+      <span class="badge gold">记忆 = 投影 · 可重建</span>
+      <span class="badge">变更即事件</span>
+      <span class="badge">身份以链为界</span>
+    </div>
+  </div>
+
+  <section>
+    <h2>一次倒转</h2>
+    <p class="sub">不是"审计顺便记录了记忆"，而是"记忆从审计中长出来"。</p>
+    <div class="vs">
+      <div class="col old">
+        <h3>常规架构：两个系统</h3>
+        <li>记忆系统：为 agent 自己服务，优化"有用"——可合并、衰减、覆盖</li>
+        <li>审计系统：为外部验证者服务，优化"真实"——只增不删</li>
+        <li>信任模型："姑且相信记的是真的" vs 密码学可验证</li>
+        <li>记忆可能被投毒、被捏造，与真实经历无法区分</li>
+      </div>
+      <div class="col new">
+        <h3>evo-agent：折叠成一套</h3>
+        <li>审计链是唯一的事实底座</li>
+        <li>记忆 = 链的投影、索引与派生视图——不是另一个事实存储</li>
+        <li>每条记忆携带可回溯的因果出处</li>
+        <li>每次记忆变更本身也是一个审计事件</li>
+      </div>
+    </div>
+    <div class="fold">判定规则只有一条：<b>一条记忆可信，当且仅当它能回溯到链上事实。</b>无出处的记忆就是不可信的记忆——记忆投毒这一整类攻击不是靠检测封死的，是靠构造排除的。</div>
+  </section>
+
+  <section>
+    <h2>这意味着什么</h2>
+    <p class="sub">六层含义，每一层都对应仓中可核对的机制。</p>
+    <div class="grid6">
+      <div class="imp"><div class="n">含义 1</div><h3>单一事实源</h3><p>记忆降格为缓存：可删除、可重建、可丢弃重算——唯独不可伪造。</p></div>
+      <div class="imp"><div class="n">含义 2</div><h3>漂移有账</h3><p>摘要被重写、偏好被覆盖、旧条目被合并——每次记忆变更都是链上事实。"agent 为什么变成这样"从解释变成可查的变更史。</p></div>
+      <div class="imp"><div class="n">含义 3</div><h3>重放即重建</h3><p>空白实例 + 审计链 = 完整重演记忆状态。迁移=复制链；两个 agent 的差异=比对两条链。</p></div>
+      <div class="imp"><div class="n">含义 4</div><h3>事实-解释-绑定</h3><p>事实在链上；解释（摘要/归纳）是锚定在链上的模型变换；先记账再压缩，压缩本身也落账。</p></div>
+      <div class="imp"><div class="n">含义 5</div><h3>注意力可审计</h3><p>召回了什么、裁掉了什么、组装了什么，逐调用入账——"决定是在什么上下文里做出的"可验证。</p></div>
+      <div class="imp"><div class="n">含义 6</div><h3>记忆主张可证明</h3><p>"我经历过 X，所以我知道 Y"——第三方可拿证据文档独立验证这个主张的链上出处。</p></div>
+    </div>
+    <div class="quote">
+      agent 的"自我"有了工程定义：<b>那条链，加上在链上可重放的全部解释。</b>
+      <div class="who">—— 这不是修辞，是可执行的语义：重放链 + 重放变换 = 重演出这个 agent</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>哪些已经是事实</h2>
+    <p class="sub">以下机制已在公开仓库中在役，可核对——我们不把"计划"写进这一节。</p>
+    <div class="facts">
+      <div class="fact"><span class="tick">✓</span><span><b>操作日志链化</b>——逐行哈希三元组，自有链并锚定引擎链</span></div>
+      <div class="fact"><span class="tick">✓</span><span><b>记忆沉淀逐字在链</b>——记忆/摘要/偏好作为事实入链（端到端实测）</span></div>
+      <div class="fact"><span class="tick">✓</span><span><b>记忆事件链锚</b>——事件存储带链锚与防篡改对账</span></div>
+      <div class="fact"><span class="tick">✓</span><span><b>召回入账</b>——每次检索的结果集落账，注意力可审计</span></div>
+      <div class="fact"><span class="tick">✓</span><span><b>上下文组装入账</b>——发送全文+哈希、裁剪边界逐调用在账</span></div>
+      <div class="fact"><span class="tick">✓</span><span><b>压缩先记账</b>——摘要/压缩全经审计协议，无影子调用</span></div>
+      <div class="fact"><span class="tick">✓</span><span><b>状态重建</b>——会话恢复走日志重放（历史/待审批/计数器）</span></div>
+      <div class="fact"><span class="tick">✓</span><span><b>冷热分层带账面</b>——分层回答成本，迁移落账不破坏可追溯</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>尚未做到什么</h2>
+    <p class="sub">这些是当前真实边界——写明缺口，不做愿景冒充现状。</p>
+    <div class="cards">
+      <div class="bcard">
+        <h4>出处锚尚未全覆盖</h4>
+        <p>记忆条目与链上事实的绑定目前是对账机制级，尚未做到每条派生记忆逐一携带完整出处——在途工作，不冒充已完成。</p>
+      </div>
+      <div class="bcard">
+        <h4>跨会话长期记忆收敛中</h4>
+        <p>会话内的链化与重建纪律已闭合；跨会话、跨实例的长期记忆面正在收敛到同一纪律。</p>
+      </div>
+      <div class="bcard">
+        <h4>遗忘与只增不删的张力</h4>
+        <p>"遗忘"的正确语义是丢弃派生视图而非事实；但事实含用户内容时，只增不删与删除权存在真实张力。当前立场：本地账本归用户可整体销毁，引擎链随会话处置；多租户与合规场景需部署级裁决——我们不假装它在架构层已一劳永逸。</p>
+      </div>
+      <div class="bcard">
+        <h4>成本与分层的铁律</h4>
+        <p>全链记忆不免费——存储、召回时延、验证开销。冷热分层是对成本的回答，但<b>分层不降信任</b>：任何一层的条目都保留链上锚定，否则"审计即记忆"在冷层断掉。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>设计原则</h2>
+    <ol class="principles">
+      <li><b>事实只存一次</b>——链是唯一事实源；一切记忆形态（索引、摘要、向量、缓存）都是投影，可删可重建。</li>
+      <li><b>先记账，再压缩</b>——任何有损变换必须先有完整账，变换本身也是账；解释永远可回溯到事实。</li>
+      <li><b>变更即事件</b>——记忆的写入/覆盖/合并/归档/迁移一律入链；漂移必须可解释。</li>
+      <li><b>分层不降信任</b>——分层回答成本，锚定保住信任。</li>
+      <li><b>身份以链为界</b>——链外的状态不构成身份。这是刻意收缩的承诺。</li>
+    </ol>
+    <p class="more" style="margin-top:14px">延伸：完整理念文档见 <a href="https://github.com/evorule/evo-agent/blob/main/docs/audit-as-memory.md">docs/audit-as-memory.md</a> · 审计链体系全貌见 <a href="audit-chain.html">白皮书网页版</a> · LLM 存证能力等级见 <a href="llm-attestation.html">存证能力页</a> · 动手试篡改检测见 <a href="wasm-demo/llm-audit.html">交互演示</a></p>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>本页为摘要；权威正本为仓库文档，内容对应 2026-10-23 版本。</span>
+    <span>EvoRule Project · <a href="https://github.com/evorule">GitHub</a> · <a href="https://gitee.com/evorule">Gitee</a></span>
+  </div>
+</footer>
+</body>
+</html>

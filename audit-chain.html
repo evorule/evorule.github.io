@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>审计链白皮书：可独立验证的可信性 · EvoRule</title>
+  <meta name="description" content="你的 AI 助手的每一步操作都被记录在一条防篡改的密码学链条上。你不需要信任我们——你可以亲自验证。evo-agent 审计链体系全貌：事实哈希链、签名锚点链、运行时哨兵、EVID 公开证据投影。" />
+  <style>
+    :root {
+      --gold: #D4AF37; --gold-light: #F0D27A;
+      --bg: #0d1117; --card: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #9aa7b8;
+      --green: #8FBF6B; --red: #C96A5B; --amber: #D9A94E;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.7; }
+    a { color: var(--gold-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { background: rgba(13,17,23,0.92); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
+    nav { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between;
+      align-items: center; padding: 14px 24px; }
+    nav .brand { font-weight: 700; color: var(--gold); letter-spacing: .5px;
+      display: inline-flex; align-items: center; gap: 9px; }
+    nav .brand svg { display: block; flex: none; }
+    nav .links a { color: var(--muted); margin-left: 15px; font-size: 14px; }
+    nav .links a:hover { color: var(--gold-light); text-decoration: none; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    .hero { padding: 46px 0 26px; }
+    .hero h1 { font-size: 30px; margin-bottom: 12px; }
+    .hero p { color: var(--muted); max-width: 860px; font-size: 15.5px; }
+    .badges { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+      font-size: 12.5px; color: var(--muted); }
+    .badge.gold { color: var(--gold); border-color: var(--gold); }
+    .layernav { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 4px; }
+    .layernav a { border: 1px solid var(--border); background: var(--card); border-radius: 8px;
+      padding: 8px 16px; font-size: 14px; color: var(--text); }
+    .layernav a:hover { border-color: var(--gold); text-decoration: none; }
+    .layernav a b { color: var(--gold-light); }
+    section { padding: 26px 0; }
+    .ltag { display: inline-block; font-size: 12px; letter-spacing: 1.5px; color: var(--gold);
+      text-transform: uppercase; border: 1px solid var(--gold); border-radius: 999px;
+      padding: 2px 12px; margin-bottom: 10px; }
+    h2 { font-size: 20px; margin-bottom: 6px; }
+    h3 { font-size: 16px; margin: 20px 0 10px; color: var(--gold-light); }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+    p.body { color: var(--text); font-size: 15px; margin-bottom: 12px; max-width: 860px; }
+    p.body b { color: var(--gold-light); }
+    .pull { border-left: 3px solid var(--gold); padding: 10px 16px; margin: 14px 0;
+      font-size: 16px; background: rgba(212,175,55,0.05); border-radius: 0 8px 8px 0; }
+    table { width: 100%; border-collapse: collapse; background: var(--card);
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 14px;
+      margin-bottom: 8px; }
+    th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--gold-light); font-weight: 600; font-size: 13px; background: rgba(212,175,55,0.06); }
+    tr:last-child td { border-bottom: none; }
+    td.mono, .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+    .yes { color: var(--green); font-weight: 700; }
+    .note { color: var(--muted); font-size: 13.5px; }
+    pre { background: #0a0d12; border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+      margin: 10px 0; }
+    pre .c { color: var(--muted); }
+    .stack { margin: 14px 0; }
+    .slayer { border: 1px solid var(--gold); border-radius: 10px; padding: 13px 18px;
+      background: var(--card); }
+    .slayer + .slayer { margin-top: 8px; }
+    .slayer .t { font-size: 15px; font-weight: 700; color: var(--gold-light); }
+    .slayer .d { font-size: 13px; color: var(--muted); }
+    .slayer.nested-host { border-style: dashed; }
+    .slayer.evid { margin: 10px 14px 2px; border-color: var(--amber);
+      background: rgba(212,175,55,0.05); }
+    .slayer.evid .t { color: var(--amber); }
+    footer { border-top: 1px solid var(--border); margin-top: 30px; padding: 22px 0 34px;
+      color: var(--muted); font-size: 13px; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<header>
+  <nav>
+    <a class="brand" href="index.html" aria-label="EvoRule 首页">
+      <svg width="22" height="22" viewBox="0 0 960 960" role="img" aria-hidden="true">
+        <circle cx="480" cy="480" r="440" fill="none" stroke="#D4AF37" stroke-width="52"/>
+        <rect x="180" y="310" width="600" height="80" rx="8" fill="#D4AF37"/>
+        <rect x="180" y="570" width="600" height="80" rx="8" fill="#D4AF37"/>
+      </svg>
+      EvoRule
+    </a>
+    <div class="links">
+      <a href="index.html">首页</a>
+      <a href="llm-attestation.html">存证能力</a>
+      <a href="audit-as-memory.html">审计即记忆</a>
+      <a href="evid.html">EVID</a>
+      <a href="wasm-demo/llm-audit.html">审计演示</a>
+      <a href="https://github.com/evorule">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <span class="ltag">Whitepaper · 体系全貌</span>
+    <h1>evo-agent 审计链：可独立验证的可信性</h1>
+    <p>你的 AI 助手的每一步操作都被记录在一条防篡改的密码学链条上。<b>你不需要信任我们——你可以亲自验证。</b></p>
+    <div class="badges">
+      <span class="badge gold">事实哈希链 · 防篡改</span>
+      <span class="badge gold">签名锚点链 · 防抵赖</span>
+      <span class="badge gold">运行时哨兵 · 防懈怠</span>
+      <span class="badge gold">EVID 公开投影 · 可外验</span>
+      <span class="badge">跨语言验证 · 防单点</span>
+    </div>
+    <div class="layernav">
+      <a href="#l1"><b>第一层</b> · 三十秒读完</a>
+      <a href="#l2"><b>第二层</b> · 五分钟读完</a>
+      <a href="#l3"><b>第三层</b> · 深入</a>
+      <a href="#qs">附 · 快速开始</a>
+    </div>
+  </div>
+
+  <section id="l1">
+    <span class="ltag">第一层 · 三十秒读完</span>
+    <h2>给每一个使用者</h2>
+    <p class="body">当你使用 evo-agent 完成一次任务——问一个问题、执行一个操作、生成一份文档——背后发生了什么？</p>
+    <p class="body">AI 模型的每次调用、每次返回、每条规则的命中、每次状态变更，都会被追加写入一条<b>只增不删</b>的密码学链条。链条上每一环都携带前环的哈希指纹，任何一环被篡改，后续所有环的指纹都会失配——<b>篡改即红</b>。</p>
+    <p class="body">但"我们说它安全"毫无意义。真正重要的是：<b>你可以自己验</b>。一条命令，不装我们的软件也行，用 Python 也行，用任何语言写二十行代码也行——把你手中的审计记录重算一遍哈希，跟链尾值对比。一致，则可信；不一致，则被动过。</p>
+    <p class="body">更进一步：整条审计链可以导出为一份<b>标准化证据文档（EVID）</b>——一个 JSON 文件交给任何第三方，对方用一个单文件 Python 脚本、装一个 blake3 库，就能离线验完。不需要我们的软件，不需要访问我们的服务器。</p>
+    <div class="pull">这不是承诺，是数学。</div>
+  </section>
+
+  <section id="l2">
+    <span class="ltag">第二层 · 五分钟读完</span>
+    <h2>给工程师与技术决策者</h2>
+
+    <h3>它是什么</h3>
+    <p class="sub">evo-agent 内置一套三层审计体系加一层公开投影，记录 AI 代理执行过程中的全部事实。</p>
+    <table>
+      <tr><th>层</th><th>解决的问题</th><th>一句话</th></tr>
+      <tr><td><b>事实哈希链</b></td><td>记录被改了怎么办</td><td>每条事实带 BLAKE3 哈希 + 前条链接，改动任何一条即链断</td></tr>
+      <tr><td><b>签名锚点链</b></td><td>整条链被重写了怎么办</td><td>周期性对链尾做 Ed25519 签名封条——整链重算也无法通过绑定验证</td></tr>
+      <tr><td><b>运行时哨兵</b></td><td>没人盯着怎么办</td><td>定时扫描 + 跨扫描基线比对——纯追加与历史被改后重算可精确区分</td></tr>
+      <tr><td><b>EVID 公开投影</b></td><td>外部第三方怎么验</td><td>审计链一键导出为标准化证据文档；单文件验证器离线验链+验签</td></tr>
+    </table>
+
+    <h3>实际记录了什么</h3>
+    <p class="sub">以一次真实会话为例——用户向 AI 提问"1+1等于几？"，审计链自动记录了 20 条事实。</p>
+    <table>
+      <tr><th>链上事实</th><th>记录了什么</th></tr>
+      <tr><td>Command</td><td>用户发送的原始指令（逐字在链）</td></tr>
+      <tr><td>IoRequest → IoResponse</td><td>实际发送给模型的消息集合 + 模型的真实返回（逐字在链）</td></tr>
+      <tr><td>StateTransition</td><td>每次状态变更的完整快照</td></tr>
+      <tr><td>TransitionTrace</td><td>每条规则的命中/未命中判定（含域归因）</td></tr>
+      <tr><td>Stable</td><td>收敛标记</td></tr>
+      <tr><td>会话摘要与偏好沉淀</td><td>自动捕获的用户偏好（受保护域写入）</td></tr>
+      <tr><td>journal 锚</td><td>本地操作日志的链尾指纹（绑定到引擎链）</td></tr>
+    </table>
+    <p class="note">没有抽样，没有日志级别过滤——全部事实，逐条落链。</p>
+
+    <h3>篡改检测实测</h3>
+    <table>
+      <tr><th>攻击方式</th><th>难度</th><th>结果</th></tr>
+      <tr><td>修改一条回答的内容（"2"改"3"，不重算哈希）</td><td>低</td><td class="yes">✅ 检出：链哈希失配</td></tr>
+      <tr><td>删除末尾记录</td><td>中</td><td class="yes">✅ 检出：哨兵基线"记录回退"</td></tr>
+      <tr><td>修改内容 + 重算全部哈希（使链自身自洽）</td><td>高</td><td class="yes">✅ 检出：签名锚点绑定失败</td></tr>
+      <tr><td>伪造签名锚点</td><td>极高</td><td>需持有签名私钥；密钥不落审计资产</td></tr>
+    </table>
+    <p class="note"><b>证据文档面同样实测</b>：对 EVID 证据文档的七连破坏注入（改字段/删中间记录/插入记录/删尾/整链重算+旧签名/同密钥不同链/验证器自检）全部检出（8/8），并作为 CI 常驻验收门。</p>
+
+    <h3>怎么验</h3>
+    <p class="sub"><b>方式一：CLI 验证</b></p>
+<pre><span class="c"># 从 server 导出审计链</span>
+curl http://your-server:port/api/sessions/{id}/audit?include_content=true &gt; audit.json
+<span class="c"># 验证哈希链 + 签名锚点</span>
+evorule verify-chain audit.json
+evorule verify-anchors audit.json --pubkey &lt;你的公钥&gt;</pre>
+    <p class="sub"><b>方式二：任何语言，二十行代码</b>——哈希算法是公开的：<span class="mono">fact_hash = blake3(stable_json_utf8)</span>，<span class="mono">chain_step = blake3(prev + content)</span>。不需要安装 evo-agent；11 组跨语言黄金向量（含中文、边界值）供你校验自己的实现。</p>
+    <p class="sub"><b>方式三：HTTP 端点</b></p>
+<pre>GET  /api/sessions/{id}/audit/verify     <span class="c">→ 链完整性</span>
+GET  /api/sessions/{id}/anchors          <span class="c">→ 签名锚点列表</span>
+POST /api/sessions/{id}/anchors/verify   <span class="c">→ 三层验证（结构+签名+绑定）</span></pre>
+    <p class="sub"><b>方式四：EVID 证据文档（给外部第三方——零门槛）</b></p>
+<pre><span class="c"># 导出方：从 journal 导出标准化证据文档</span>
+evid_export --journal data/sessions/{id}.jsonl -o evidence.json
+<span class="c"># 验证方：单文件验证器（仅需 Python + blake3）</span>
+python evid_verify.py evidence.json                  <span class="c"># 链完整性（篡改六分类定位）</span>
+python evid_verify.py evidence.json --pubkey &lt;hex&gt;   <span class="c"># + Ed25519 验签（长度防移植）</span>
+python evid_verify.py --self-test                    <span class="c"># 验证器自检 4/4</span></pre>
+    <p class="note">篡改六分类：<span class="mono">field_modified / record_deleted / record_inserted / tail_truncated / signature_invalid / chain_substituted</span>——不止报红，还告诉你动过哪里。</p>
+
+    <h3>部署者配置</h3>
+    <p class="sub">审计链开箱即用（哈希链默认启用）。签名锚点需注入密钥：</p>
+<pre><span class="c"># 一次性生成密钥对</span>
+evorule anchor-keygen --output /secure/path/anchor.seed
+evorule anchor-pubkey /secure/path/anchor.seed  <span class="c"># 分发给验证方</span>
+<span class="c"># server 启动时注入（密钥仅进内存，不落审计资产）</span>
+export EVORULE_ANCHOR_SEED=&lt;64-hex-seed&gt;
+export EVORULE_ANCHOR_INTERVAL=64  <span class="c"># 每 64 条事实自动封一锚</span></pre>
+  </section>
+
+  <section id="l3">
+    <span class="ltag">第三层 · 深入</span>
+    <h2>给安全研究者与审计专家</h2>
+
+    <h3>威胁模型</h3>
+    <table>
+      <tr><th>攻击向量</th><th>检出机制</th><th>层</th></tr>
+      <tr><td>A1 修改记录内容</td><td>content_hash 重算失配</td><td>哈希链</td></tr>
+      <tr><td>A2 插入/删除记录</td><td>prev_hash 链接断裂</td><td>哈希链</td></tr>
+      <tr><td>A3 前缀截断</td><td>锚点 fact_range 区间无缝校验失败</td><td>锚点链</td></tr>
+      <tr><td>A4 整链重算</td><td>锚点 chain_head 与重算链头绑定失败</td><td>锚点链</td></tr>
+      <tr><td>A5 整链替换</td><td>伪造链无有效签名</td><td>锚点链</td></tr>
+      <tr><td>A6 引擎替换</td><td>engine_id 入锚点载荷</td><td>锚点链</td></tr>
+      <tr><td>A7 锚点前缀截断</td><td>锚点链 prev 链接断裂 + seq 连续性</td><td>锚点链</td></tr>
+      <tr><td>A8 格式降级</td><td>WAL 文件头格式戳缺失</td><td>文件头</td></tr>
+      <tr><td>A9 尾截断</td><td>哨兵基线记录回退 / 锚点 fact_range 超出</td><td>哨兵/锚点</td></tr>
+      <tr><td>A10 密钥持有者从头记假账</td><td><b>不防</b>——见诚实边界</td><td>—</td></tr>
+      <tr><td>A11 篡改 EVID 证据文档</td><td>evid_hash 重算失配——六分类定位</td><td>EVID 投影</td></tr>
+      <tr><td>A12 伪造 EVID 投影链</td><td>投影层无密钥、自洽链可构造——签名绑定检出</td><td>EVID+锚点</td></tr>
+    </table>
+
+    <h3>哈希契约</h3>
+    <p class="sub"><b>输入规范化</b>：每条事实通过显式字段构造序列化为稳定 JSON——键序固定（字母序，与 Python <span class="mono">json.dumps(sort_keys=True)</span> 一致）；None 字段省略；UTF-8 编码无转义差异。</p>
+<pre>content_hash = BLAKE3( stable_json_utf8 )
+chain_hash   = BLAKE3( prev_chain_hash_hex ++ content_hash_hex )</pre>
+    <p class="sub"><b>跨语言保证</b>：11 组黄金向量由 Rust 实算导出，Python 独立实现对拍 11/11 一致，CI 强制运行——不靠注释宣称兼容。</p>
+    <p class="sub"><b>签名载荷</b>（Ed25519，RFC 8032）：</p>
+<pre>signature_payload = "evorule-anchor/2|{session_id}|{seq}|{lo}|{hi}|{chain_head}|{key_id}|{engine_id}|{logical_time}"</pre>
+    <p class="note">字段以 | 串接——第三方验证器仅需 Ed25519 库即可验签，零额外依赖。</p>
+    <p class="sub"><b>EVID 投影哈希</b>（证据文档逐条记录，7 字段因果元组全部字符串化/显式 null）：</p>
+<pre>evid_hash = BLAKE3( canonical_json([ str(seq), step_id, fact_type,
+                                      cause|null, previous_evid,
+                                      fact_hash, domain_check|null ]) )</pre>
+    <p class="note">5 组向量 + 创世根由 Python 独立推导、Rust 测试逐值断言（双向锁定）；CI evid-parity 常驻（自检 + 对拍 + 七连注入验收）。</p>
+
+    <h3>形式化语义</h3>
+    <p class="body">审计链哈希完整性的核心性质——<b>链步 back-link 归纳</b>——已通过有界模型检测验证（Kani，unwind=10，SUCCESSFUL）：对任意链 L，compute_chain_hash(L) 等于逐条 chain_step 折叠至末尾。差分测试（proptest）常驻 CI：进程内追加路径与 WAL 重放路径产生全等四元组。</p>
+
+    <h3>诚实边界</h3>
+    <table>
+      <tr><th>不防什么</th><th>为什么</th><th>补位</th></tr>
+      <tr><td>密钥持有者从头记假账</td><td>密钥持有者可构造自洽链+有效签名——所有签名体系的共同边界</td><td>多签/外部见证/HSM（部署级）</td></tr>
+      <tr><td>审计链自身的密钥泄露</td><td>密钥泄露→签名可伪造</td><td>HSM/密钥轮换（已支持 key_id）</td></tr>
+      <tr><td>哈希碰撞</td><td>BLAKE3 抗碰撞性是密码学假设，非本系统证明</td><td>密码学社区持续审计</td></tr>
+      <tr><td>审计链节点不可用</td><td>可用性非完整性范畴</td><td>部署级冗余</td></tr>
+      <tr><td>伪造 EVID 证据投影</td><td>投影层<b>故意不含密钥</b>——任何人都能构造自洽投影链，这是"公开可验"的代价</td><td>投影不可单独作为执行证据；须与签名锚点联用</td></tr>
+    </table>
+
+    <h3>架构分层</h3>
+    <div class="stack">
+      <div class="slayer"><div class="t">签名锚点链（防抵赖）</div><div class="d">Ed25519 · 链头绑定 · 区间无缝 · 密钥轮换</div></div>
+      <div class="slayer nested-host"><div class="t">事实哈希链（防篡改）</div><div class="d">BLAKE3 · 逐条链接 · write-ahead · 崩溃恢复</div>
+        <div class="slayer evid"><div class="t">EVID 公开投影（可外验）</div><div class="d">标准证据文档 · 单文件验证器 · 无密钥 · chain_root ← 锚点签名绑定</div></div>
+      </div>
+      <div class="slayer"><div class="t">运行时哨兵（防懈怠）</div><div class="d">基线比对 · 前缀锚定 · 跨扫描连续性</div></div>
+      <div class="slayer"><div class="t">跨语言验证（防单点）</div><div class="d">黄金向量 · 独立实现 · CI 强制对拍</div></div>
+    </div>
+  </section>
+
+  <section id="qs">
+    <span class="ltag">附录</span>
+    <h2>快速开始</h2>
+<pre><span class="c"># 1. 克隆仓库</span>
+git clone https://github.com/evorule/evo-agent.git
+
+<span class="c"># 2. EVID 证据投影：跨语言向量对拍（克隆即可验，无需运行环境）</span>
+pip install blake3
+python scripts/evid_verify.py --vectors scripts/evid_golden_vectors.json
+python scripts/evid_verify.py --self-test
+<span class="c"># 期望输出: vectors: 6/6 与 自检 4/4 PASS</span>
+
+<span class="c"># 3. 事实链跨语言黄金向量（内核仓）</span>
+git clone https://github.com/evorule/evorule.git
+python evorule/scripts/cross_lang_verifier.py evorule/scripts/g5_golden_vectors.json
+<span class="c"># 期望输出: PASS: 11 组向量 / 0 失配</span>
+
+<span class="c"># 4. 从运行中的 server 导出审计链并验证</span>
+curl http://localhost:18099/api/sessions/1/audit?include_content=true &gt; audit.json
+evorule verify-chain audit.json
+
+<span class="c"># 5. 有 journal 文件时：导出证据文档并离线验证</span>
+cargo run --bin evid_export -- --journal data/sessions/{id}.jsonl -o evidence.json
+python scripts/evid_verify.py evidence.json</pre>
+    <p class="note">延伸阅读：<a href="llm-attestation.html">LLM 活动存证：能力等级与边界</a> · <a href="audit-as-memory.html">审计即记忆：可验证的 Agent 身份</a> · <a href="evid.html">EVID：故意丢弃密钥的证据链</a> · 动手试篡改检测：<a href="wasm-demo/llm-audit.html">交互演示</a></p>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>本页为文档的网页版；权威正本为仓库文档，内容对应 2026-10-23 版本。</span>
+    <span>EvoRule Project · <a href="https://github.com/evorule">GitHub</a> · <a href="https://gitee.com/evorule">Gitee</a></span>
+  </div>
+</footer>
+</body>
+</html>
